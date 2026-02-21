@@ -1,6 +1,6 @@
 // Authentication System
-import { onAuthStateChanged, signOut, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import { onAuthStateChanged, signOut, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 import { auth, db, provider } from "./firebase-config.js";
 
 class AuthSystem {
@@ -173,7 +173,7 @@ class AuthSystem {
             } else {
                 console.log('No user signed in');
                 // Opsional: Redirect ke login jika ingin mewajibkan login
-                // window.location.href = 'login.html';
+                window.location.href = 'login.html';
             }
         });
     }

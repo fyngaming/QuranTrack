@@ -10,6 +10,11 @@ const quotes = [
 // Inisialisasi
 let completedJuzList = JSON.parse(localStorage.getItem('completedJuz')) || [];
 let isDarkMode = localStorage.getItem('darkMode') !== 'false';
+let isLebaranMode = false;
+
+// Expose ke window agar auth.js bisa mengaksesnya
+window.completedJuzList = completedJuzList;
+window.renderJuzGrid = renderJuzGrid;
 
 // Tanggal tetap untuk Ramadhan dan Lebaran
 const RAMADHAN_START = new Date('2026-02-19T04:24:00+07:00'); // 19 Februari 2026 pukul 04:24
@@ -51,6 +56,11 @@ function renderJuzGrid() {
     const juzGrid = document.getElementById('juzGrid');
     if (!juzGrid) return;
     
+    // Sinkronisasi dengan data global jika ada update dari Auth/Database
+    if (window.completedJuzList && window.completedJuzList !== completedJuzList) {
+        completedJuzList = window.completedJuzList;
+    }
+
     juzGrid.innerHTML = '';
     
     for (let i = 1; i <= 30; i++) {
@@ -100,6 +110,7 @@ function toggleJuz(juzNumber) {
     }
     
     localStorage.setItem('completedJuz', JSON.stringify(completedJuzList));
+    window.completedJuzList = completedJuzList; // Update global variable
     renderJuzGrid();
 }
 
@@ -182,11 +193,107 @@ function updateRamadhanDay() {
 function updateLebaranCountdown() {
     const countdown = calculateRealCountdown();
     
+    // Cek jika waktu sudah habis (Lebaran tiba)
+    if (countdown.days === 0 && countdown.hours === 0 && countdown.minutes === 0 && countdown.seconds === 0) {
+        if (!isLebaranMode) {
+            showLebaranCelebration();
+        }
+        return;
+    }
+    
     // Update tampilan dengan animasi
     animateNumber('daysLeft', countdown.days);
     animateNumber('hoursLeft', countdown.hours);
     animateNumber('minutesLeft', countdown.minutes);
     animateNumber('secondsLeft', countdown.seconds);
+}
+
+function showLebaranCelebration() {
+    isLebaranMode = true;
+    
+    const countdownContainer = document.querySelector('.lebaran-countdown');
+    if (countdownContainer) {
+        countdownContainer.innerHTML = `
+            <div class="lebaran-celebration" style="text-align: center; animation: fadeIn 1s ease-in; padding: 20px;">
+                <div style="font-size: 3rem; margin-bottom: 10px; animation: bounce 2s infinite;">🕌 ✨ 🌙</div>
+                <h2 style="
+                    font-size: 2.2rem; 
+                    color: #ffd700; 
+                    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); 
+                    margin-bottom: 15px;
+                    font-family: 'Amiri', serif;
+                ">
+                    Selamat Hari Raya Idul Fitri 1447 H
+                </h2>
+                <h3 style="font-size: 1.5rem; margin-bottom: 10px; color: var(--text-color);">Taqabbalallahu Minna Wa Minkum</h3>
+                <p style="font-size: 1.1rem; opacity: 0.9; color: var(--text-secondary);">Mohon Maaf Lahir dan Batin</p>
+            </div>
+        `;
+    }
+    
+    // Tambahkan animasi confetti full screen
+    startLebaranAnimation();
+}
+
+function startLebaranAnimation() {
+    // Container untuk animasi
+    let container = document.getElementById('lebaranAnimationContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'lebaranAnimationContainer';
+        container.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            overflow: hidden;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    // Tambahkan style animasi
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .lebaran-confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            top: -10px;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Interval untuk membuat confetti terus menerus
+    setInterval(() => {
+        const colors = ['#ffd700', '#4ade80', '#60a5fa', '#f472b6', '#fb923c', '#ffffff'];
+        const shapes = ['50%', '0']; // Circle and Square
+        
+        for (let i = 0; i < 5; i++) { // Buat 5 confetti setiap interval
+            const confetti = document.createElement('div');
+            confetti.className = 'lebaran-confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.borderRadius = shapes[Math.floor(Math.random() * shapes.length)];
+            confetti.style.animation = `fall ${Math.random() * 3 + 3}s linear forwards`;
+            confetti.style.opacity = Math.random() * 0.5 + 0.5;
+            
+            container.appendChild(confetti);
+            
+            // Hapus elemen setelah animasi selesai
+            setTimeout(() => confetti.remove(), 6000);
+        }
+    }, 300);
 }
 
 function animateNumber(elementId, newValue) {
@@ -276,6 +383,7 @@ function init() {
     updateRamadhanDay();
     updateLebaranCountdown();
     displayRandomQuote();
+    createFooter();
     
     // Set intervals - countdown dengan animasi
     setInterval(updateLebaranCountdown, 1000); // Update setiap detik
@@ -1295,6 +1403,68 @@ class QuranReader {
                 const surahNumber = parseInt(card.dataset.surah);
                 this.loadSurah(surahNumber);
             });
+        });
+    }
+}
+
+function createFooter() {
+    let footer = document.querySelector('.site-footer');
+    
+    // Jika footer belum ada, buat elemennya
+    if (!footer) {
+        footer = document.createElement('footer');
+        footer.className = 'site-footer';
+        footer.style.cssText = `
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 60px;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            color: var(--text-secondary, #ccc);
+            position: relative;
+            z-index: 10;
+            width: 100%;
+        `;
+        document.body.appendChild(footer);
+    }
+
+    // Update konten footer
+    footer.className = 'site-footer';
+    footer.innerHTML = `
+        <div class="footer-content">
+            <p style="margin-bottom: 20px; font-size: 1.1em; color: var(--text-color, #fff); font-weight: 500;">Created by Favian Yusuf Ashari</p>
+            <a href="https://www.instagram.com/favianyusuf_?igsh=MWJ1ZW5hZWN0OWxneQ==" target="_blank" rel="noopener noreferrer" id="instagramLink" style="
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                text-decoration: none;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 25px;
+                background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+                font-weight: 600;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            ">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+                <span style="font-size: 0.95em;">@favianyusuf_</span>
+            </a>
+        </div>
+    `;
+    
+    // Menambahkan event listener untuk hover effect dengan JavaScript
+    const instagramLink = footer.querySelector('#instagramLink');
+    if (instagramLink) {
+        instagramLink.addEventListener('mouseenter', () => {
+            instagramLink.style.transform = 'translateY(-3px) scale(1.05)';
+            instagramLink.style.boxShadow = '0 8px 25px rgba(220, 39, 67, 0.4)';
+        });
+        instagramLink.addEventListener('mouseleave', () => {
+            instagramLink.style.transform = 'translateY(0) scale(1)';
+            instagramLink.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
         });
     }
 }

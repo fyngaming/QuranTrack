@@ -1,5 +1,5 @@
 // Integrasi Google Sign-In dengan Firebase Authentication
-import { signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+import { signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 import { auth, provider } from "./firebase-config.js";
 
 class AuthIntegration {
