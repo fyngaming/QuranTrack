@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Fitur Baca Quran</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { border-color: #4CAF50; background: #f9fff9; }
+        .error { border-color: #f44336; background: #fff9f9; }
+        .loading { border-color: #ff9800; background: #fffaf0; }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1976D2; }
+        .surah-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+        .surah-item { padding: 10px; background: #f0f0f0; border-radius: 5px; cursor: pointer; }
+        .surah-item:hover { background: #e0e0e0; }
+        .ayah { margin: 10px 0; padding: 10px; background: #f9f9f9; border-radius: 5px; }
+        .arabic { font-size: 1.5em; text-align: right; margin-bottom: 5px; }
+        .translation { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Fitur Baca Quran</h1>
+        
+        <div class="test-section" id="dataTest">
+            <h3>1. Test Data Surat</h3>
+            <button onclick="testSurahData()">Test Data Surat</button>
+            <div id="dataResult"></div>
+        </div>
+        
+        <div class="test-section" id="apiTest">
+            <h3>2. Test API Connection</h3>
+            <button onclick="testAPI()">Test Koneksi API</button>
+            <div id="apiResult"></div>
+        </div>
+        
+        <div class="test-section" id="surahTest">
+            <h3>3. Test Load Surat</h3>
+            <button onclick="testLoadSurah()">Load Al-Fatihah</button>
+            <div id="surahResult"></div>
+        </div>
+        
+        <div class="test-section" id="listTest">
+            <h3>4. Test Daftar Surat</h3>
+            <button onclick="showSurahList()">Tampilkan Daftar Surat</button>
+            <div id="listResult"></div>
+        </div>
+    </div>
+
+    <script src="quran-data.js"></script>
+    <script src="quran-api.js"></script>
+    <script>
+        function testSurahData() {
+            const result = document.getElementById('dataResult');
+            result.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                if (typeof quranData !== 'undefined' && quranData.surahs) {
+                    const totalSurahs = quranData.surahs.length;
+                    const firstSurah = quranData.surahs[0];
+                    const lastSurah = quranData.surahs[quranData.surahs.length - 1];
+                    
+                    result.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Data Surat Berhasil Dimuat</h4>
+                            <p><strong>Total Surat:</strong> ${totalSurahs}</p>
+                            <p><strong>Surat Pertama:</strong> ${firstSurah.number}. ${firstSurah.name} (${firstSurah.arabicName})</p>
+                            <p><strong>Surat Terakhir:</strong> ${lastSurah.number}. ${lastSurah.name} (${lastSurah.arabicName})</p>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Data quranData tidak tersedia');
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testAPI() {
+            const result = document.getElementById('apiResult');
+            result.innerHTML = '<div class="loading"><p>Testing API connection...</p></div>';
+            
+            try {
+                if (typeof quranAPI !== 'undefined') {
+                    const surahList = await quranAPI.getSurahList();
+                    if (surahList && surahList.length > 0) {
+                        result.innerHTML = `
+                            <div class="success">
+                                <h4>✅ API Connection Berhasil</h4>
+                                <p><strong>Total Surat dari API:</strong> ${surahList.length}</p>
+                                <p><strong>Contoh Surat:</strong> ${surahList[0].name.transliteration.id}</p>
+                            </div>
+                        `;
+                    } else {
+                        throw new Error('API tidak mengembalikan data');
+                    }
+                } else {
+                    throw new Error('QuranAPI tidak tersedia');
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        <h4>⚠️ API Offline - Menggunakan Data Lokal</h4>
+                        <p>${error.message}</p>
+                        <p>Aplikasi akan menggunakan data lokal yang tersedia.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testLoadSurah() {
+            const result = document.getElementById('surahResult');
+            result.innerHTML = '<div class="loading"><p>Loading Al-Fatihah...</p></div>';
+            
+            try {
+                const surahData = await quranData.getSurahData(1);
+                if (surahData && surahData.verses) {
+                    result.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Surat Al-Fatihah Berhasil Dimuat</h4>
+                            <p><strong>Nama:</strong> ${surahData.name} (${surahData.arabicName})</p>
+                            <p><strong>Jumlah Ayat:</strong> ${surahData.verses.length}</p>
+                            <p><strong>Tempat Turun:</strong> ${surahData.revelation}</p>
+                            
+                            <h5>Contoh Ayat Pertama:</h5>
+                            <div class="ayah">
+                                <div class="arabic">${surahData.verses[0].arabic}</div>
+                                <div class="translation">${surahData.verses[0].translation}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Data surat tidak tersedia');
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error Loading Surat</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function showSurahList() {
+            const result = document.getElementById('listResult');
+            
+            try {
+                if (quranData && quranData.surahs) {
+                    const surahCards = quranData.surahs.slice(0, 10).map(surah => `
+                        <div class="surah-item" onclick="loadSurahFromList(${surah.number})">
+                            <strong>${surah.number}. ${surah.name}</strong><br>
+                            <small>${surah.arabicName} • ${surah.verses} ayat • ${surah.revelation}</small>
+                        </div>
+                    `).join('');
+                    
+                    result.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Daftar Surat (10 pertama)</h4>
+                            <p>Klik surat untuk memuat:</p>
+                            <div class="surah-list">
+                                ${surahCards}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Data surat tidak tersedia');
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function loadSurahFromList(surahNumber) {
+            const result = document.getElementById('listResult');
+            const originalContent = result.innerHTML;
+            
+            result.innerHTML = '<div class="loading"><p>Loading surat...</p></div>';
+            
+            try {
+                const surahData = await quranData.getSurahData(surahNumber);
+                if (surahData && surahData.verses) {
+                    const ayahList = surahData.verses.slice(0, 3).map(verse => `
+                        <div class="ayah">
+                            <strong>Ayat ${verse.number}:</strong><br>
+                            <div class="arabic">${verse.arabic}</div>
+                            <div class="translation">${verse.translation}</div>
+                        </div>
+                    `).join('');
+                    
+                    result.innerHTML = `
+                        <div class="success">
+                            <h4>✅ ${surahData.name} (${surahData.arabicName})</h4>
+                            <p><strong>Jumlah Ayat:</strong> ${surahData.verses.length} • <strong>Tempat Turun:</strong> ${surahData.revelation}</p>
+                            
+                            <h5>3 Ayat Pertama:</h5>
+                            ${ayahList}
+                            
+                            <button onclick="showSurahList()">Kembali ke Daftar</button>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Data surat tidak tersedia');
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error Loading Surat</h4>
+                        <p>${error.message}</p>
+                        <button onclick="showSurahList()">Kembali ke Daftar</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto test saat halaman dimuat
+        window.addEventListener('load', () => {
+            console.log('🧪 Starting automatic tests...');
+            testSurahData();
+            setTimeout(testAPI, 1000);
+        });
+    </script>
+</body>
+</html>

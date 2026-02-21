@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Fitur Penilaian Hafalan - Quran Track</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .demo-section {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+        }
+        
+        .demo-title {
+            color: var(--secondary-color);
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .feature-item h4 {
+            color: var(--secondary-color);
+            margin-bottom: 8px;
+        }
+        
+        .demo-examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .example-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            border: 2px solid;
+        }
+        
+        .example-card.sangat-tepat {
+            border-color: #22c55e;
+        }
+        
+        .example-card.tepat {
+            border-color: #3b82f6;
+        }
+        
+        .example-card.kurang-tepat {
+            border-color: #f59e0b;
+        }
+        
+        .example-card.tidak-tepat {
+            border-color: #ef4444;
+        }
+        
+        .example-badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        
+        .example-points {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .start-demo-btn {
+            background: linear-gradient(45deg, var(--success-color), #66bb6a);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: var(--border-radius);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: block;
+            margin: 30px auto;
+        }
+        
+        .start-demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="demo-container">
+        <h1 class="demo-title">🧠 Fitur Penilaian Hafalan Al-Qur'an</h1>
+        
+        <div class="demo-section">
+            <h2>✨ Fitur Baru yang Ditambahkan</h2>
+            <ul class="feature-list">
+                <li class="feature-item">
+                    <h4>🎯 Sistem Penilaian Bertingkat</h4>
+                    <p>Setiap jawaban akan dinilai dengan 4 kategori: Sangat Tepat, Tepat, Kurang Tepat, dan Tidak Tepat</p>
+                </li>
+                <li class="feature-item">
+                    <h4>📊 Poin Berbeda untuk Setiap Kategori</h4>
+                    <p>Sistem poin yang adil berdasarkan tingkat ketepatan jawaban pengguna</p>
+                </li>
+                <li class="feature-item">
+                    <h4>🔍 Algoritma Similarity Checking</h4>
+                    <p>Menggunakan algoritma Levenshtein distance untuk menghitung kesamaan jawaban</p>
+                </li>
+                <li class="feature-item">
+                    <h4>💬 Feedback Motivasi</h4>
+                    <p>Pesan motivasi yang berbeda untuk setiap kategori penilaian</p>
+                </li>
+                <li class="feature-item">
+                    <h4>🏆 Sistem Grading A-D</h4>
+                    <p>Penilaian akhir dengan grade dan pesan motivasi yang sesuai</p>
+                </li>
+                <li class="feature-item">
+                    <h4>📈 Statistik Detail</h4>
+                    <p>Tampilan statistik lengkap dengan breakdown per kategori</p>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🎯 Kategori Penilaian</h2>
+            <div class="demo-examples">
+                <div class="example-card sangat-tepat">
+                    <div class="example-badge" style="background: #22c55e;">Sangat Tepat</div>
+                    <div class="example-points" style="color: #22c55e;">100 Poin</div>
+                    <p>Kesamaan ≥ 95%</p>
+                    <p>🎉 Luar biasa! Hafalan sempurna!</p>
+                </div>
+                
+                <div class="example-card tepat">
+                    <div class="example-badge" style="background: #3b82f6;">Tepat</div>
+                    <div class="example-points" style="color: #3b82f6;">80 Poin</div>
+                    <p>Kesamaan ≥ 80%</p>
+                    <p>✅ Bagus! Sedikit kesalahan</p>
+                </div>
+                
+                <div class="example-card kurang-tepat">
+                    <div class="example-badge" style="background: #f59e0b;">Kurang Tepat</div>
+                    <div class="example-points" style="color: #f59e0b;">40 Poin</div>
+                    <p>Kesamaan ≥ 50%</p>
+                    <p>⚠️ Perlu lebih teliti lagi</p>
+                </div>
+                
+                <div class="example-card tidak-tepat">
+                    <div class="example-badge" style="background: #ef4444;">Tidak Tepat</div>
+                    <div class="example-points" style="color: #ef4444;">10 Poin</div>
+                    <p>Kesamaan < 50%</p>
+                    <p>❌ Tetap semangat belajar!</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🏆 Sistem Grading</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div style="background: rgba(34, 197, 94, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #22c55e;">
+                    <h4 style="color: #22c55e; margin-bottom: 10px;">Grade A+ (900-1000)</h4>
+                    <p style="margin: 0; color: var(--text-color);">Istimewa - Hafalan sempurna!</p>
+                </div>
+                <div style="background: rgba(59, 130, 246, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #3b82f6;">
+                    <h4 style="color: #3b82f6; margin-bottom: 10px;">Grade A (800-899)</h4>
+                    <p style="margin: 0; color: var(--text-color);">Sangat Baik</p>
+                </div>
+                <div style="background: rgba(245, 158, 11, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #f59e0b;">
+                    <h4 style="color: #f59e0b; margin-bottom: 10px;">Grade B (600-799)</h4>
+                    <p style="margin: 0; color: var(--text-color);">Baik - Terus berlatih!</p>
+                </div>
+                <div style="background: rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #ef4444;">
+                    <h4 style="color: #ef4444; margin-bottom: 10px;">Grade C-D (< 600)</h4>
+                    <p style="margin: 0; color: var(--text-color);">Perlu belajar lebih</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🔧 Cara Kerja Algoritma</h2>
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px;">
+                <h4 style="color: var(--secondary-color);">Algoritma Levenshtein Distance</h4>
+                <p>Sistem menggunakan algoritma Levenshtein distance untuk menghitung kesamaan antara jawaban pengguna dengan jawaban yang benar:</p>
+                <ul style="margin-left: 20px; color: var(--text-secondary);">
+                    <li>Menghitung jumlah perubahan minimum (insert, delete, substitute) yang diperlukan</li>
+                    <li>Mengkonversi ke persentase kesamaan</li>
+                    <li>Memberikan poin berdasarkan tingkat kesamaan</li>
+                    <li>Menampilkan feedback yang sesuai</li>
+                </ul>
+            </div>
+        </div>
+        
+        <button class="start-demo-btn" onclick="window.location.href='index.html'">
+            🚀 Coba Fitur Hafalan Sekarang
+        </button>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

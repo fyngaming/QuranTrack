@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contoh Penggunaan API Al-Quran</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .verse-card {
+            background: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .arabic-text {
+            font-size: 24px;
+            line-height: 1.8;
+            text-align: right;
+            font-family: 'Amiri', 'Traditional Arabic', serif;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .transliteration {
+            font-style: italic;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+        .translation {
+            color: #495057;
+            line-height: 1.6;
+        }
+        .surah-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #218838;
+        }
+        .loading {
+            text-align: center;
+            color: #6c757d;
+        }
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕌 Demo API Al-Quran Lengkap</h1>
+        
+        <div class="controls">
+            <button onclick="loadSurah(1)">Al-Fatihah</button>
+            <button onclick="loadSurah(2)">Al-Baqarah (5 ayat pertama)</button>
+            <button onclick="loadSurah(36)">Yasin</button>
+            <button onclick="loadRandomVerse()">Ayat Acak</button>
+            <button onclick="loadSpecificVerse()">Ayat Spesifik</button>
+        </div>
+
+        <div class="search-section">
+            <input type="text" class="search-box" id="searchInput" placeholder="Cari ayat (contoh: rahmat, taqwa, sabar)">
+            <button onclick="searchVerses()">🔍 Cari</button>
+        </div>
+
+        <div id="content">
+            <p class="loading">Klik tombol di atas untuk memuat data Al-Quran...</p>
+        </div>
+    </div>
+
+    <script src="quran-api.js"></script>
+    <script src="quran-data.js"></script>
+    <script>
+        // Fungsi untuk memuat surat
+        async function loadSurah(surahNumber, maxVerses = null) {
+            const content = document.getElementById('content');
+            content.innerHTML = '<p class="loading">Memuat data surat...</p>';
+
+            try {
+                const surahData = await quranAPI.getSurahWithVerses(surahNumber);
+                
+                if (surahData) {
+                    let html = `
+                        <div class="surah-info">
+                            <h2>${surahData.name} (${surahData.arabicName})</h2>
+                            <p><strong>Nomor:</strong> ${surahData.number} | 
+                               <strong>Jumlah Ayat:</strong> ${surahData.numberOfVerses} | 
+                               <strong>Turun di:</strong> ${surahData.revelation}</p>
+                        </div>
+                    `;
+
+                    const versesToShow = maxVerses ? surahData.verses.slice(0, maxVerses) : surahData.verses;
+                    
+                    versesToShow.forEach(verse => {
+                        html += `
+                            <div class="verse-card">
+                                <div class="arabic-text">${verse.arabic}</div>
+                                <div class="transliteration">${verse.transliteration}</div>
+                                <div class="translation">${verse.number}. ${verse.translation}</div>
+                            </div>
+                        `;
+                    });
+
+                    if (maxVerses && surahData.verses.length > maxVerses) {
+                        html += `<p><em>Menampilkan ${maxVerses} ayat pertama dari ${surahData.verses.length} ayat total.</em></p>`;
+                    }
+
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = '<p>❌ Gagal memuat data surat.</p>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                content.innerHTML = '<p>❌ Terjadi kesalahan saat memuat data.</p>';
+            }
+        }
+
+        // Fungsi untuk memuat ayat acak
+        async function loadRandomVerse() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<p class="loading">Memuat ayat acak...</p>';
+
+            try {
+                const randomData = await quranAPI.getRandomVerse();
+                
+                if (randomData) {
+                    const html = `
+                        <div class="surah-info">
+                            <h2>🎲 Ayat Acak</h2>
+                            <p><strong>Surat:</strong> ${randomData.surah.name} (${randomData.surah.arabicName}) - Ayat ${randomData.verse.number}</p>
+                        </div>
+                        <div class="verse-card">
+                            <div class="arabic-text">${randomData.verse.arabic}</div>
+                            <div class="transliteration">${randomData.verse.transliteration}</div>
+                            <div class="translation">${randomData.verse.translation}</div>
+                        </div>
+                    `;
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = '<p>❌ Gagal memuat ayat acak.</p>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                content.innerHTML = '<p>❌ Terjadi kesalahan saat memuat ayat acak.</p>';
+            }
+        }
+
+        // Fungsi untuk memuat ayat spesifik
+        async function loadSpecificVerse() {
+            const surahNum = prompt("Masukkan nomor surat (1-114):");
+            const verseNum = prompt("Masukkan nomor ayat:");
+            
+            if (surahNum && verseNum) {
+                const content = document.getElementById('content');
+                content.innerHTML = '<p class="loading">Memuat ayat spesifik...</p>';
+
+                try {
+                    const verseData = await quranAPI.getSpecificVerse(parseInt(surahNum), parseInt(verseNum));
+                    
+                    if (verseData) {
+                        const html = `
+                            <div class="surah-info">
+                                <h2>📖 Ayat Spesifik</h2>
+                                <p><strong>Surat:</strong> ${verseData.surah.name} (${verseData.surah.arabicName}) - Ayat ${verseData.verse.number}</p>
+                            </div>
+                            <div class="verse-card">
+                                <div class="arabic-text">${verseData.verse.arabic}</div>
+                                <div class="transliteration">${verseData.verse.transliteration}</div>
+                                <div class="translation">${verseData.verse.translation}</div>
+                            </div>
+                        `;
+                        content.innerHTML = html;
+                    } else {
+                        content.innerHTML = '<p>❌ Ayat tidak ditemukan.</p>';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    content.innerHTML = '<p>❌ Terjadi kesalahan saat memuat ayat.</p>';
+                }
+            }
+        }
+
+        // Fungsi untuk mencari ayat
+        async function searchVerses() {
+            const keyword = document.getElementById('searchInput').value.trim();
+            
+            if (!keyword) {
+                alert('Masukkan kata kunci pencarian!');
+                return;
+            }
+
+            const content = document.getElementById('content');
+            content.innerHTML = '<p class="loading">Mencari ayat...</p>';
+
+            try {
+                const results = await quranAPI.searchVerses(keyword);
+                
+                if (results.length > 0) {
+                    let html = `
+                        <div class="surah-info">
+                            <h2>🔍 Hasil Pencarian: "${keyword}"</h2>
+                            <p>Ditemukan ${results.length} ayat</p>
+                        </div>
+                    `;
+
+                    results.forEach(result => {
+                        html += `
+                            <div class="verse-card">
+                                <h4>${result.surah.name} (${result.surah.arabicName}) - Ayat ${result.verse.number}</h4>
+                                <div class="arabic-text">${result.verse.arabic}</div>
+                                <div class="transliteration">${result.verse.transliteration}</div>
+                                <div class="translation">${result.verse.translation}</div>
+                            </div>
+                        `;
+                    });
+
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = `<p>❌ Tidak ditemukan ayat yang mengandung kata "${keyword}".</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                content.innerHTML = '<p>❌ Terjadi kesalahan saat mencari ayat.</p>';
+            }
+        }
+
+        // Event listener untuk pencarian dengan Enter
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchVerses();
+            }
+        });
+
+        // Muat Al-Fatihah secara default
+        window.onload = function() {
+            loadSurah(1);
+        };
+    </script>
+</body>
+</html>
