@@ -56,6 +56,7 @@
         <nav class="navigation">
             <button class="nav-btn active" data-section="progress">📊 Progress</button>
             <button class="nav-btn" data-section="quran">📖 Baca Quran</button>
+            <button class="nav-btn" data-section="history">📚 History Bacaan</button>
             <button class="nav-btn" data-section="hafalan">🧠 Uji Hafalan</button>
         </nav>
 
@@ -117,6 +118,19 @@
                 </div>
             </section>
 
+            <!-- History Section -->
+            <section id="historySection" class="section">
+                <div class="history-container">
+                    <div class="history-header">
+                        <h2>📚 History Bacaan Al-Quran</h2>
+                        <p>Ayat-ayat yang telah Anda tandai</p>
+                    </div>
+                    <div id="historyList" class="history-list">
+                        <!-- History items will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
             <!-- Hafalan Section -->
             <section id="hafalanSection" class="section">
                 <div class="hafalan-container">
@@ -132,16 +146,19 @@
                                     <span class="level-icon">🌱</span>
                                     <span class="level-name">Mudah</span>
                                     <span class="level-desc">Surat-surat pendek</span>
+                                    <span class="level-time">⏱️ 60 detik/soal</span>
                                 </button>
                                 <button class="level-btn" data-level="sedang">
                                     <span class="level-icon">🌿</span>
                                     <span class="level-name">Sedang</span>
                                     <span class="level-desc">Campuran surat</span>
+                                    <span class="level-time">⏱️ 45 detik/soal</span>
                                 </button>
                                 <button class="level-btn" data-level="sulit">
                                     <span class="level-icon">🌳</span>
                                     <span class="level-name">Sulit</span>
                                     <span class="level-desc">Surat-surat panjang</span>
+                                    <span class="level-time">⏱️ 30 detik/soal</span>
                                 </button>
                             </div>
                         </div>
@@ -160,6 +177,9 @@
                     
                     <!-- Test Phase -->
                     <div id="hafalanTest" class="hafalan-test" style="display: none;">
+                        <button class="exit-test-btn" id="exitTestBtn" onclick="window.hafalanSystem.confirmExit()">
+                            ❌
+                        </button>
                         <div class="test-header">
                             <div class="test-progress-bar">
                                 <div class="test-progress-fill" id="testProgress"></div>

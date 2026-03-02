@@ -492,6 +492,11 @@ function setupEventListeners() {
                 if (btn.dataset.section === 'quran' && window.quranReader) {
                     window.quranReader.initializeQuranSection();
                 }
+                
+                // Load history when history section is activated
+                if (btn.dataset.section === 'history' && window.quranReader) {
+                    window.quranReader.loadHistory();
+                }
             }
         });
     });
@@ -509,6 +514,13 @@ class HafalanSystem {
         this.recognition = null;
         this.isRecording = false;
         this.currentAnswer = '';
+        this.timer = null;
+        this.timeLeft = 0;
+        this.timePerQuestion = {
+            mudah: 60,    // 60 detik
+            sedang: 45,   // 45 detik
+            sulit: 30     // 30 detik
+        };
         
         this.initializeVoiceRecognition();
         this.setupEventListeners();
@@ -619,29 +631,52 @@ class HafalanSystem {
         
         if (!container || !answerSection) return;
         
-        // Tampilkan kembali tombol submit dan bersihkan feedback sebelumnya
         if (submitBtn) {
             submitBtn.style.display = 'block';
             submitBtn.disabled = false;
         }
         
-        // Clear previous content
         container.innerHTML = '';
         
         document.getElementById('currentQuestion').textContent = this.currentQuestionIndex + 1;
         document.getElementById('testProgress').style.width = `${((this.currentQuestionIndex + 1) / 10) * 100}%`;
         document.getElementById('currentScore').textContent = this.score;
         
+        // Start timer
+        this.startTimer();
+        
         if (question.type === 'complete') {
             container.innerHTML = `
                 <div class="question-type">Lengkapi Bacaan Latin</div>
+                <div class="timer-display" id="timerDisplay">
+                    <span class="timer-icon">⏱️</span>
+                    <span class="timer-text" id="timerText">00:00</span>
+                </div>
                 <div class="question-arabic">${question.arabic}</div>
                 <div class="question-text">Lengkapi bacaan latin dari ayat di atas</div>
             `;
-            answerSection.innerHTML = `<textarea class="answer-input" id="answerInput" placeholder="Ketik bacaan latin..."></textarea>`;
+            
+            if (this.voiceMode) {
+                answerSection.innerHTML = `
+                    <div class="voice-input-container">
+                        <textarea class="answer-input" id="answerInput" placeholder="Ketik atau gunakan suara..."></textarea>
+                        <button class="voice-record-btn" id="voiceRecordBtn" onclick="window.hafalanSystem.toggleVoiceRecording()">
+                            <span class="mic-icon">🎤</span>
+                            <span class="record-text">Rekam Suara</span>
+                        </button>
+                        <div class="voice-status" id="voiceStatus" style="display: none;"></div>
+                    </div>
+                `;
+            } else {
+                answerSection.innerHTML = `<textarea class="answer-input" id="answerInput" placeholder="Ketik bacaan latin..."></textarea>`;
+            }
         } else if (question.type === 'identify') {
             container.innerHTML = `
                 <div class="question-type">Identifikasi Ayat</div>
+                <div class="timer-display" id="timerDisplay">
+                    <span class="timer-icon">⏱️</span>
+                    <span class="timer-text" id="timerText">00:00</span>
+                </div>
                 <div class="question-arabic">${question.arabic}</div>
                 <div class="question-text">Sebutkan nama surat dan nomor ayat</div>
             `;
@@ -654,14 +689,165 @@ class HafalanSystem {
         } else if (question.type === 'translate') {
             container.innerHTML = `
                 <div class="question-type">Terjemahkan Ayat</div>
+                <div class="timer-display" id="timerDisplay">
+                    <span class="timer-icon">⏱️</span>
+                    <span class="timer-text" id="timerText">00:00</span>
+                </div>
                 <div class="question-arabic">${question.arabic}</div>
                 <div class="question-text">Apa arti dari ayat di atas?</div>
             `;
-            answerSection.innerHTML = `<textarea class="answer-input" id="answerInput" placeholder="Ketik terjemahan..."></textarea>`;
+            
+            if (this.voiceMode) {
+                answerSection.innerHTML = `
+                    <div class="voice-input-container">
+                        <textarea class="answer-input" id="answerInput" placeholder="Ketik atau gunakan suara..."></textarea>
+                        <button class="voice-record-btn" id="voiceRecordBtn" onclick="window.hafalanSystem.toggleVoiceRecording()">
+                            <span class="mic-icon">🎤</span>
+                            <span class="record-text">Rekam Suara</span>
+                        </button>
+                        <div class="voice-status" id="voiceStatus" style="display: none;"></div>
+                    </div>
+                `;
+            } else {
+                answerSection.innerHTML = `<textarea class="answer-input" id="answerInput" placeholder="Ketik terjemahan..."></textarea>`;
+            }
+        }
+    }
+    
+    startTimer() {
+        // Clear existing timer
+        if (this.timer) {
+            clearInterval(this.timer);
+        }
+        
+        // Set time based on difficulty level
+        this.timeLeft = this.timePerQuestion[this.currentLevel] || 60;
+        
+        // Update display immediately
+        this.updateTimerDisplay();
+        
+        // Start countdown
+        this.timer = setInterval(() => {
+            this.timeLeft--;
+            this.updateTimerDisplay();
+            
+            // Warning when time is running out
+            if (this.timeLeft <= 10) {
+                const timerDisplay = document.getElementById('timerDisplay');
+                if (timerDisplay) {
+                    timerDisplay.classList.add('timer-warning');
+                }
+            }
+            
+            // Time's up
+            if (this.timeLeft <= 0) {
+                clearInterval(this.timer);
+                this.handleTimeUp();
+            }
+        }, 1000);
+    }
+    
+    updateTimerDisplay() {
+        const timerText = document.getElementById('timerText');
+        if (timerText) {
+            const minutes = Math.floor(this.timeLeft / 60);
+            const seconds = this.timeLeft % 60;
+            timerText.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    handleTimeUp() {
+        const timerDisplay = document.getElementById('timerDisplay');
+        if (timerDisplay) {
+            timerDisplay.classList.add('timer-expired');
+        }
+        
+        showNotification('⏰ Waktu habis! Melanjutkan ke soal berikutnya...');
+        
+        // Auto submit with empty answer
+        setTimeout(() => {
+            this.submitAnswer();
+        }, 1500);
+    }
+    
+    stopTimer() {
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+    }
+    
+    toggleVoiceRecording() {
+        if (!this.recognition) {
+            showNotification('❌ Browser Anda tidak mendukung fitur voice recognition');
+            return;
+        }
+        
+        const recordBtn = document.getElementById('voiceRecordBtn');
+        const voiceStatus = document.getElementById('voiceStatus');
+        const answerInput = document.getElementById('answerInput');
+        
+        if (!this.isRecording) {
+            // Mulai rekam
+            this.isRecording = true;
+            recordBtn.classList.add('recording');
+            recordBtn.innerHTML = `
+                <span class="mic-icon pulse">🎤</span>
+                <span class="record-text">Merekam...</span>
+            `;
+            
+            if (voiceStatus) {
+                voiceStatus.style.display = 'block';
+                voiceStatus.innerHTML = '<div class="recording-animation">🔴 Sedang merekam...</div>';
+            }
+            
+            this.recognition.start();
+            
+            this.recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                if (answerInput) {
+                    answerInput.value = transcript;
+                }
+                this.currentAnswer = transcript;
+            };
+            
+            this.recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                showNotification('❌ Terjadi kesalahan saat merekam suara');
+                this.stopVoiceRecording();
+            };
+            
+            this.recognition.onend = () => {
+                this.stopVoiceRecording();
+            };
+        } else {
+            // Stop rekam
+            this.recognition.stop();
+        }
+    }
+    
+    stopVoiceRecording() {
+        this.isRecording = false;
+        const recordBtn = document.getElementById('voiceRecordBtn');
+        const voiceStatus = document.getElementById('voiceStatus');
+        
+        if (recordBtn) {
+            recordBtn.classList.remove('recording');
+            recordBtn.innerHTML = `
+                <span class="mic-icon">🎤</span>
+                <span class="record-text">Rekam Suara</span>
+            `;
+        }
+        
+        if (voiceStatus) {
+            voiceStatus.style.display = 'none';
         }
     }
     
     submitAnswer() {
+        // Stop timer
+        this.stopTimer();
+        
         const question = this.questions[this.currentQuestionIndex];
         let userAnswer = '';
         let evaluation = this.evaluateAnswer(question);
@@ -1067,31 +1253,114 @@ class HafalanSystem {
     }
     
     backToSetup() {
+        this.stopTimer();
+        
+        // Hide result and test sections
         const result = document.getElementById('hafalanResult');
+        const test = document.getElementById('hafalanTest');
         const setup = document.getElementById('hafalanSetup');
         
         if (result) result.style.display = 'none';
-        if (setup) setup.style.display = 'block';
+        if (test) test.style.display = 'none';
+        if (setup) setup.style.display = 'none';
         
-        // Reset selections
+        // Navigate to main menu (Progress section)
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        
+        const progressBtn = document.querySelector('[data-section="progress"]');
+        const progressSection = document.getElementById('progressSection');
+        
+        if (progressBtn) progressBtn.classList.add('active');
+        if (progressSection) progressSection.classList.add('active');
+        
+        // Reset hafalan setup
         document.querySelectorAll('.level-btn').forEach(btn => btn.classList.remove('selected'));
         this.currentLevel = null;
         const startBtn = document.getElementById('startTest');
         if (startBtn) startBtn.disabled = true;
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    confirmExit() {
+        // Stop timer sementara
+        this.stopTimer();
+        
+        // Buat custom modal konfirmasi
+        const modal = document.createElement('div');
+        modal.className = 'exit-confirm-modal';
+        modal.innerHTML = `
+            <div class="exit-confirm-content">
+                <div class="exit-icon">⚠️</div>
+                <h3>Keluar dari Uji Hafalan?</h3>
+                <p>Jika Anda keluar sekarang, skor uji hafalan Anda akan dianggap <strong>0 (kosong)</strong>.</p>
+                <p class="exit-warning">Progress yang sudah dikerjakan tidak akan tersimpan.</p>
+                <div class="exit-confirm-buttons">
+                    <button class="exit-cancel-btn" onclick="window.hafalanSystem.cancelExit()">
+                        ❌ Tidak, Lanjutkan
+                    </button>
+                    <button class="exit-confirm-btn" onclick="window.hafalanSystem.exitTest()">
+                        ✅ Ya, Keluar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        setTimeout(() => modal.classList.add('show'), 10);
+    }
+    
+    cancelExit() {
+        const modal = document.querySelector('.exit-confirm-modal');
+        if (modal) {
+            modal.classList.remove('show');
+            setTimeout(() => modal.remove(), 300);
+        }
+        
+        // Lanjutkan timer
+        this.startTimer();
+    }
+    
+    exitTest() {
+        // Hapus modal
+        const modal = document.querySelector('.exit-confirm-modal');
+        if (modal) {
+            modal.classList.remove('show');
+            setTimeout(() => modal.remove(), 300);
+        }
+        
+        // Set skor ke 0
+        this.score = 0;
+        this.answers = [];
+        
+        // Tampilkan hasil dengan skor 0
+        this.showFinalResult();
     }
     
     restart() {
+        this.stopTimer();
+        
         const result = document.getElementById('hafalanResult');
         const test = document.getElementById('hafalanTest');
         
         if (result) result.style.display = 'none';
         if (test) test.style.display = 'block';
         
+        // Reset quiz state
         this.currentQuestionIndex = 0;
         this.score = 0;
         this.answers = [];
+        
+        // Generate new questions
         this.generateQuestions();
+        
+        // Show first question
         this.showQuestion();
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
@@ -1289,6 +1558,44 @@ class QuranReader {
                     </div>
                 </div>
                 
+                <div class="tajwid-legend">
+                    <h4>📚 Panduan Hukum Tajwid</h4>
+                    <div class="tajwid-info">
+                        ℹ️ Untuk pewarnaan hukum tajwid yang akurat, disarankan menggunakan mushaf Al-Quran digital atau aplikasi khusus tajwid.
+                        Berikut adalah panduan warna umum hukum tajwid:
+                    </div>
+                    <div class="tajwid-legend-grid">
+                        <div class="tajwid-item">
+                            <div class="tajwid-color" style="background: #a8dadc;"></div>
+                            <span class="tajwid-label">Ikhfa (Samar)</span>
+                        </div>
+                        <div class="tajwid-item">
+                            <div class="tajwid-color" style="background: #457b9d;"></div>
+                            <span class="tajwid-label">Idgham (Masuk)</span>
+                        </div>
+                        <div class="tajwid-item">
+                            <div class="tajwid-color" style="background: #e63946;"></div>
+                            <span class="tajwid-label">Iqlab (Membalik)</span>
+                        </div>
+                        <div class="tajwid-item">
+                            <div class="tajwid-color" style="background: #f1faee;"></div>
+                            <span class="tajwid-label">Ghunnah (Dengung)</span>
+                        </div>
+                        <div class="tajwid-item">
+                            <div class="tajwid-color" style="background: #06ffa5;"></div>
+                            <span class="tajwid-label">Qalqalah (Mantul)</span>
+                        </div>
+                        <div class="tajwid-item">
+                            <div class="tajwid-color" style="background: #ffbe0b;"></div>
+                            <span class="tajwid-label">Mad (Panjang)</span>
+                        </div>
+                        <div class="tajwid-item">
+                            <div class="tajwid-color" style="background: #fb5607;"></div>
+                            <span class="tajwid-label">Waqf (Berhenti)</span>
+                        </div>
+                    </div>
+                </div>
+                
                 ${this.generateBismillah(surahData.number)}
                 
                 <div class="ayah-list">
@@ -1327,6 +1634,9 @@ class QuranReader {
                         <div class="ayah-latin">${verse.transliteration}</div>
                         <div class="ayah-translation">${verse.translation}</div>
                     </div>
+                    <button class="bookmark-btn" onclick="window.quranReader.bookmarkAyah(${surahNumber}, ${verse.number})" title="Simpan ayat ini">
+                        🔖
+                    </button>
                 </div>
             `;
         }).join('');
@@ -1404,6 +1714,108 @@ class QuranReader {
                 this.loadSurah(surahNumber);
             });
         });
+    }
+    
+    bookmarkAyah(surahNumber, verseNumber) {
+        const bookmarks = JSON.parse(localStorage.getItem('quranBookmarks')) || [];
+        const surahInfo = window.quranData.surahs.find(s => s.number === surahNumber);
+        
+        const bookmark = {
+            surahNumber,
+            surahName: surahInfo?.name || 'Unknown',
+            verseNumber,
+            timestamp: new Date().toISOString()
+        };
+        
+        bookmarks.unshift(bookmark);
+        localStorage.setItem('quranBookmarks', JSON.stringify(bookmarks));
+        
+        showNotification(`✅ Ayat ${surahInfo?.name} ayat ${verseNumber} telah disimpan!`);
+    }
+    
+    loadHistory() {
+        const bookmarks = JSON.parse(localStorage.getItem('quranBookmarks')) || [];
+        const historyList = document.getElementById('historyList');
+        
+        if (!historyList) return;
+        
+        if (bookmarks.length === 0) {
+            historyList.innerHTML = `
+                <div class="empty-history">
+                    <div class="empty-icon">📚</div>
+                    <h3>Belum Ada History</h3>
+                    <p>Tandai ayat saat membaca Al-Quran untuk menyimpannya di sini</p>
+                </div>
+            `;
+            return;
+        }
+        
+        historyList.innerHTML = bookmarks.map((bookmark, index) => `
+            <div class="history-item">
+                <div class="history-info">
+                    <h4>${bookmark.surahName} - Ayat ${bookmark.verseNumber}</h4>
+                    <p class="history-time">${this.formatTime(bookmark.timestamp)}</p>
+                </div>
+                <div class="history-actions">
+                    <button class="history-btn" onclick="window.quranReader.goToAyah(${bookmark.surahNumber}, ${bookmark.verseNumber})">
+                        📖 Baca
+                    </button>
+                    <button class="delete-btn" onclick="window.quranReader.deleteBookmark(${index})">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    formatTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = now - date;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        
+        if (minutes < 1) return 'Baru saja';
+        if (minutes < 60) return `${minutes} menit yang lalu`;
+        if (hours < 24) return `${hours} jam yang lalu`;
+        if (days < 7) return `${days} hari yang lalu`;
+        return date.toLocaleDateString('id-ID');
+    }
+    
+    async goToAyah(surahNumber, verseNumber) {
+        // Switch to quran section
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        
+        const quranBtn = document.querySelector('[data-section="quran"]');
+        const quranSection = document.getElementById('quranSection');
+        
+        if (quranBtn) quranBtn.classList.add('active');
+        if (quranSection) quranSection.classList.add('active');
+        
+        // Load surah
+        await this.loadSurah(surahNumber);
+        
+        // Scroll to ayah
+        setTimeout(() => {
+            const ayahs = document.querySelectorAll('.ayah');
+            if (ayahs[verseNumber - 1]) {
+                ayahs[verseNumber - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                ayahs[verseNumber - 1].style.background = 'rgba(255, 215, 0, 0.2)';
+                setTimeout(() => {
+                    ayahs[verseNumber - 1].style.background = '';
+                }, 2000);
+            }
+        }, 500);
+    }
+    
+    deleteBookmark(index) {
+        const bookmarks = JSON.parse(localStorage.getItem('quranBookmarks')) || [];
+        bookmarks.splice(index, 1);
+        localStorage.setItem('quranBookmarks', JSON.stringify(bookmarks));
+        this.loadHistory();
+        showNotification('🗑️ History dihapus');
     }
 }
 
