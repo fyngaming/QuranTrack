@@ -531,8 +531,9 @@ class HafalanSystem {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             this.recognition = new SpeechRecognition();
             this.recognition.continuous = false;
-            this.recognition.interimResults = false;
+            this.recognition.interimResults = true; // Ubah ke true untuk hasil lebih akurat
             this.recognition.lang = 'id-ID';
+            this.recognition.maxAlternatives = 3; // Ambil 3 alternatif terbaik
         }
     }
     
@@ -804,9 +805,26 @@ class HafalanSystem {
             this.recognition.start();
             
             this.recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                if (answerInput) {
+                // Ambil hasil final atau interim
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        transcript += event.results[i][0].transcript;
+                    } else {
+                        // Tampilkan interim result
+                        const interimTranscript = event.results[i][0].transcript;
+                        if (answerInput) {
+                            answerInput.placeholder = `Mendengarkan: ${interimTranscript}...`;
+                        }
+                    }
+                }
+                
+                // Update input dengan hasil final
+                if (transcript && answerInput) {
+                    // Bersihkan dan format transcript
+                    transcript = transcript.trim();
                     answerInput.value = transcript;
+                    answerInput.placeholder = 'Ketik atau gunakan suara...';
                 }
                 this.currentAnswer = transcript;
             };
@@ -900,85 +918,168 @@ class HafalanSystem {
             correctAnswer = question.surah.toLowerCase();
             const correctVerse = question.verse;
             
-            // Evaluasi untuk identifikasi ayat
-            const surahMatch = this.calculateSimilarity(userSurah, correctAnswer);
+            // Evaluasi untuk identifikasi ayat dengan toleransi lebih tinggi
+            const surahMatch = this.calculateFlexibleSimilarity(userSurah, correctAnswer);
             const verseMatch = userVerse === correctVerse;
             
-            if (surahMatch >= 0.9 && verseMatch) {
+            if (surahMatch >= 0.75 && verseMatch) {
                 return {
                     category: 'Sangat Tepat',
                     points: 100,
-                    feedback: '🎉 Luar biasa! Jawaban Anda sangat tepat dan akurat!',
+                    feedback: '🎉 Sempurna! Jawaban Anda benar!',
                     color: '#22c55e'
                 };
-            } else if (surahMatch >= 0.7 && verseMatch) {
+            } else if (surahMatch >= 0.55 && verseMatch) {
                 return {
                     category: 'Tepat',
-                    points: 80,
-                    feedback: '✅ Bagus! Jawaban Anda tepat dengan sedikit kesalahan penulisan.',
+                    points: 85,
+                    feedback: '✅ Bagus! Jawaban Anda benar meskipun ada sedikit perbedaan penulisan.',
                     color: '#3b82f6'
                 };
-            } else if (surahMatch >= 0.5 || verseMatch) {
+            } else if (surahMatch >= 0.4 || verseMatch) {
                 return {
                     category: 'Kurang Tepat',
-                    points: 40,
-                    feedback: '⚠️ Jawaban Anda kurang tepat. Perlu lebih teliti lagi.',
+                    points: 50,
+                    feedback: '⚠️ Hampir benar! Perhatikan penulisan atau nomor ayat.',
                     color: '#f59e0b'
                 };
             } else {
                 return {
                     category: 'Tidak Tepat',
-                    points: 10,
-                    feedback: '❌ Jawaban belum tepat. Tetap semangat belajar!',
+                    points: 20,
+                    feedback: '❌ Belum tepat. Coba lagi!',
                     color: '#ef4444'
                 };
             }
         }
         
-        // Evaluasi untuk melengkapi ayat dan terjemahan
-        const similarity = this.calculateSimilarity(userAnswer, correctAnswer);
+        // Evaluasi untuk melengkapi ayat dan terjemahan dengan sistem poin bertingkat
+        const similarity = this.calculateFlexibleSimilarity(userAnswer, correctAnswer);
         
-        if (similarity >= 0.85) {
+        // Sistem poin bertingkat yang lebih detail
+        if (similarity >= 0.95) {
             return {
                 category: 'Sangat Tepat',
                 points: 100,
-                feedback: '🎉 Luar biasa! Jawaban Anda sangat tepat dan sempurna!',
+                feedback: '🎉 Sempurna! Jawaban Anda 100% benar!',
                 color: '#22c55e'
             };
-        } else if (similarity >= 0.7) {
+        } else if (similarity >= 0.85) {
+            return {
+                category: 'Sangat Tepat',
+                points: 95,
+                feedback: '🌟 Luar biasa! Hampir sempurna!',
+                color: '#22c55e'
+            };
+        } else if (similarity >= 0.75) {
             return {
                 category: 'Tepat',
-                points: 80,
-                feedback: '✅ Bagus! Jawaban Anda tepat dengan sedikit kesalahan.',
+                points: 90,
+                feedback: '✅ Sangat bagus! Jawaban Anda benar!',
                 color: '#3b82f6'
             };
-        } else if (similarity >= 0.4) {
+        } else if (similarity >= 0.65) {
+            return {
+                category: 'Tepat',
+                points: 85,
+                feedback: '✅ Bagus! Jawaban Anda tepat dengan sedikit perbedaan.',
+                color: '#3b82f6'
+            };
+        } else if (similarity >= 0.55) {
+            return {
+                category: 'Tepat',
+                points: 75,
+                feedback: '👍 Benar! Ada sedikit kesalahan penulisan.',
+                color: '#3b82f6'
+            };
+        } else if (similarity >= 0.45) {
             return {
                 category: 'Kurang Tepat',
-                points: 40,
-                feedback: '⚠️ Jawaban Anda kurang tepat. Perlu lebih banyak latihan.',
+                points: 60,
+                feedback: '⚠️ Cukup baik! Masih ada beberapa kesalahan.',
+                color: '#f59e0b'
+            };
+        } else if (similarity >= 0.35) {
+            return {
+                category: 'Kurang Tepat',
+                points: 45,
+                feedback: '⚠️ Hampir benar! Perlu lebih teliti lagi.',
+                color: '#f59e0b'
+            };
+        } else if (similarity >= 0.25) {
+            return {
+                category: 'Kurang Tepat',
+                points: 30,
+                feedback: '📚 Masih kurang tepat. Pelajari lagi ya!',
                 color: '#f59e0b'
             };
         } else {
             return {
                 category: 'Tidak Tepat',
-                points: 10,
-                feedback: '❌ Jawaban belum tepat. Tetap semangat dan terus berlatih!',
+                points: 15,
+                feedback: '❌ Belum tepat. Tetap semangat belajar!',
                 color: '#ef4444'
             };
         }
     }
     
-    calculateSimilarity(str1, str2) {
-        // Normalisasi string
-        str1 = str1.replace(/[^a-zA-Z\s]/g, '').toLowerCase().trim();
-        str2 = str2.replace(/[^a-zA-Z\s]/g, '').toLowerCase().trim();
+    calculateFlexibleSimilarity(str1, str2) {
+        // Normalisasi string dengan lebih toleran
+        str1 = this.normalizeText(str1);
+        str2 = this.normalizeText(str2);
         
         if (str1 === str2) return 1;
         if (str1.length === 0 || str2.length === 0) return 0;
         
-        // Hitung kesamaan menggunakan algoritma Levenshtein distance
+        // Cek kesamaan kata per kata (lebih toleran untuk urutan)
+        const words1 = str1.split(/\s+/);
+        const words2 = str2.split(/\s+/);
+        
+        let matchedWords = 0;
+        const usedIndices = new Set();
+        
+        for (const word1 of words1) {
+            for (let i = 0; i < words2.length; i++) {
+                if (usedIndices.has(i)) continue;
+                
+                const wordSimilarity = this.calculateLevenshtein(word1, words2[i]);
+                // Toleransi tinggi untuk kesamaan kata (60% sudah dianggap sama)
+                if (wordSimilarity >= 0.6) {
+                    matchedWords++;
+                    usedIndices.add(i);
+                    break;
+                }
+            }
+        }
+        
+        // Hitung persentase kata yang cocok
+        const wordMatchScore = matchedWords / Math.max(words1.length, words2.length);
+        
+        // Hitung juga kesamaan karakter keseluruhan
+        const charSimilarity = this.calculateLevenshtein(str1, str2);
+        
+        // Gabungkan kedua metrik dengan bobot (70% kata, 30% karakter)
+        return (wordMatchScore * 0.7) + (charSimilarity * 0.3);
+    }
+    
+    normalizeText(text) {
+        return text
+            .toLowerCase()
+            .trim()
+            // Hapus tanda baca
+            .replace(/[^a-z\s]/g, '')
+            // Normalisasi spasi
+            .replace(/\s+/g, ' ')
+            // Perbaiki ejaan umum
+            .replace(/bismilah/g, 'bismillah')
+            .replace(/alhamdu/g, 'alhamdu')
+            .replace(/rahman/g, 'rahman')
+            .replace(/rahim/g, 'rahim');
+    }
+    
+    calculateLevenshtein(str1, str2) {
         const matrix = [];
+        
         for (let i = 0; i <= str2.length; i++) {
             matrix[i] = [i];
         }
@@ -1008,14 +1109,86 @@ class HafalanSystem {
         const container = document.getElementById('questionContainer');
         if (!container) return;
         
-        // Sembunyikan tombol submit sementara
         const submitBtn = document.getElementById('submitAnswer');
         if (submitBtn) {
             submitBtn.style.display = 'none';
             submitBtn.disabled = true;
         }
         
-        // Tampilkan feedback
+        const question = this.questions[this.currentQuestionIndex];
+        const lastAnswer = this.answers[this.answers.length - 1];
+        
+        // Tampilkan jawaban yang benar
+        let correctAnswerHtml = '';
+        if (question.type === 'complete') {
+            correctAnswerHtml = `
+                <div class="correct-answer-section" style="
+                    background: rgba(34, 197, 94, 0.1);
+                    border: 2px solid #22c55e;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-top: 20px;
+                    text-align: left;
+                ">
+                    <h4 style="color: #22c55e; margin-bottom: 15px; font-size: 16px;">✅ Jawaban Yang Benar:</h4>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <p style="margin: 0; color: #333; font-size: 15px; font-weight: 600;">${question.latin}</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.5); padding: 12px; border-radius: 8px;">
+                        <p style="margin: 0; color: #666; font-size: 14px; font-style: italic;">${question.translation}</p>
+                    </div>
+                    ${lastAnswer.userAnswer ? `
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                            <p style="margin: 0; color: #ef4444; font-size: 14px;"><strong>Jawaban Anda:</strong> ${lastAnswer.userAnswer}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        } else if (question.type === 'identify') {
+            correctAnswerHtml = `
+                <div class="correct-answer-section" style="
+                    background: rgba(34, 197, 94, 0.1);
+                    border: 2px solid #22c55e;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-top: 20px;
+                    text-align: left;
+                ">
+                    <h4 style="color: #22c55e; margin-bottom: 15px; font-size: 16px;">✅ Jawaban Yang Benar:</h4>
+                    <div style="background: white; padding: 15px; border-radius: 8px;">
+                        <p style="margin: 0 0 8px 0; color: #333; font-size: 15px;"><strong>Surat:</strong> ${question.surah}</p>
+                        <p style="margin: 0; color: #333; font-size: 15px;"><strong>Ayat:</strong> ${question.verse}</p>
+                    </div>
+                    ${lastAnswer.userAnswer ? `
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                            <p style="margin: 0; color: #ef4444; font-size: 14px;"><strong>Jawaban Anda:</strong> ${lastAnswer.userAnswer}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        } else if (question.type === 'translate') {
+            correctAnswerHtml = `
+                <div class="correct-answer-section" style="
+                    background: rgba(34, 197, 94, 0.1);
+                    border: 2px solid #22c55e;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-top: 20px;
+                    text-align: left;
+                ">
+                    <h4 style="color: #22c55e; margin-bottom: 15px; font-size: 16px;">✅ Terjemahan Yang Benar:</h4>
+                    <div style="background: white; padding: 15px; border-radius: 8px;">
+                        <p style="margin: 0; color: #333; font-size: 15px; line-height: 1.6;">${question.translation}</p>
+                    </div>
+                    ${lastAnswer.userAnswer ? `
+                        <div style="margin-top: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                            <p style="margin: 0; color: #ef4444; font-size: 14px;"><strong>Jawaban Anda:</strong> ${lastAnswer.userAnswer}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
         const feedbackHtml = `
             <div class="answer-feedback" style="
                 background: linear-gradient(135deg, ${evaluation.color}15, ${evaluation.color}25);
@@ -1048,17 +1221,17 @@ class HafalanSystem {
                 </div>
                 <div class="feedback-message" style="
                     font-size: 16px;
-                    color: #333;
+                    color: var(--text-color);
                     margin-top: 10px;
                 ">
                     ${evaluation.feedback}
                 </div>
+                ${correctAnswerHtml}
             </div>
         `;
         
         container.innerHTML += feedbackHtml;
         
-        // Scroll ke feedback
         setTimeout(() => {
             const feedback = container.querySelector('.answer-feedback');
             if (feedback) {
@@ -1163,8 +1336,14 @@ class HafalanSystem {
                     </div>
                     
                     <div class="result-actions">
-                        <button class="restart-btn" onclick="window.hafalanSystem.restart()">🔄 Uji Lagi</button>
-                        <button class="back-btn" onclick="window.hafalanSystem.backToSetup()">🏠 Kembali</button>
+                        <button class="restart-btn" onclick="window.hafalanSystem.restart()">
+                            <span class="btn-icon">🔄</span>
+                            <span class="btn-text">Uji Lagi</span>
+                        </button>
+                        <button class="back-btn" onclick="window.hafalanSystem.backToSetup()">
+                            <span class="btn-icon">🏠</span>
+                            <span class="btn-text">Kembali</span>
+                        </button>
                     </div>
                 </div>
             `;
@@ -1255,30 +1434,24 @@ class HafalanSystem {
     backToSetup() {
         this.stopTimer();
         
-        // Hide result and test sections
         const result = document.getElementById('hafalanResult');
         const test = document.getElementById('hafalanTest');
         const setup = document.getElementById('hafalanSetup');
         
         if (result) result.style.display = 'none';
         if (test) test.style.display = 'none';
-        if (setup) setup.style.display = 'none';
+        if (setup) setup.style.display = 'block';
         
-        // Navigate to main menu (Progress section)
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        
-        const progressBtn = document.querySelector('[data-section="progress"]');
-        const progressSection = document.getElementById('progressSection');
-        
-        if (progressBtn) progressBtn.classList.add('active');
-        if (progressSection) progressSection.classList.add('active');
-        
-        // Reset hafalan setup
+        // Reset selections
         document.querySelectorAll('.level-btn').forEach(btn => btn.classList.remove('selected'));
         this.currentLevel = null;
         const startBtn = document.getElementById('startTest');
         if (startBtn) startBtn.disabled = true;
+        
+        // Reset voice mode
+        const voiceMode = document.getElementById('voiceMode');
+        if (voiceMode) voiceMode.checked = false;
+        this.voiceMode = false;
         
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
