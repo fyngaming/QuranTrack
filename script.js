@@ -1453,6 +1453,12 @@ class HafalanSystem {
         if (voiceMode) voiceMode.checked = false;
         this.voiceMode = false;
         
+        // Reset quiz state
+        this.currentQuestionIndex = 0;
+        this.score = 0;
+        this.answers = [];
+        this.questions = [];
+        
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -1515,12 +1521,6 @@ class HafalanSystem {
     restart() {
         this.stopTimer();
         
-        const result = document.getElementById('hafalanResult');
-        const test = document.getElementById('hafalanTest');
-        
-        if (result) result.style.display = 'none';
-        if (test) test.style.display = 'block';
-        
         // Reset quiz state
         this.currentQuestionIndex = 0;
         this.score = 0;
@@ -1528,6 +1528,12 @@ class HafalanSystem {
         
         // Generate new questions
         this.generateQuestions();
+        
+        const result = document.getElementById('hafalanResult');
+        const test = document.getElementById('hafalanTest');
+        
+        if (result) result.style.display = 'none';
+        if (test) test.style.display = 'block';
         
         // Show first question
         this.showQuestion();
